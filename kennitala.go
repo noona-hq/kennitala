@@ -110,7 +110,7 @@ func (kennitala Kennitala) validateBirthdateAndCentury() error {
 	var fullYear string
 	switch centuryDigit {
 	case '8':
-		fullYear = "18" + string(year)
+		return errInvalidKennitalaCentury()
 	case '9':
 		fullYear = "19" + string(year)
 	case '0':

@@ -1,6 +1,9 @@
 package kennitala
 
 import (
+	"fmt"
+	"time"
+
 	kennitalaerrors "github.com/johannbrynjar/kennitala/kennitalaerror"
 	utils "github.com/johannbrynjar/kennitala/utils"
 )
@@ -11,6 +14,7 @@ var (
 	ErrInvalidKennitalaCentury     = errInvalidKennitalaCentury()
 	ErrInvalidKennitalaFirstLetter = errInvalidKennitalaFirstLetter()
 	ErrInvalidKennitalaCheckDigit  = errInvalidKennitalaCheckDigit()
+	ErrInvalidKennitalaDate        = errInvalidKennitalaDate()
 )
 
 func errInvalidKennitalaType() error        { return kennitalaerrors.ErrInvalidKennitalaType }
@@ -18,6 +22,7 @@ func errInvalidKennitalaLength() error      { return kennitalaerrors.ErrInvalidK
 func errInvalidKennitalaCentury() error     { return kennitalaerrors.ErrInvalidKennitalaCentury }
 func errInvalidKennitalaFirstLetter() error { return kennitalaerrors.ErrInvalidKennitalaFirstLetter }
 func errInvalidKennitalaCheckDigit() error  { return kennitalaerrors.ErrInvalidKennitalaCheckDigit }
+func errInvalidKennitalaDate() error        { return fmt.Errorf("invalid birthdate in kennitala") }
 
 type Kennitala string
 
@@ -49,16 +54,9 @@ func (kennitala Kennitala) IsValidKennitala(kennitalaType KennitalaType) error {
 		return errInvalidKennitalaLength()
 	}
 
-	centuries := map[string]string{
-		"8": "19th",
-		"9": "20th",
-		"0": "21st",
-	}
-	century := string(kennitala[9])
-	_, exists := centuries[century]
-
-	if !exists {
-		return errInvalidKennitalaCentury()
+	// Validate century and date
+	if err := kennitala.validateBirthdateAndCentury(); err != nil {
+		return err
 	}
 
 	allowFirstLetters := map[string]string{}
@@ -83,17 +81,49 @@ func (kennitala Kennitala) IsValidKennitala(kennitalaType KennitalaType) error {
 	}
 
 	first := string(kennitala[0])
-	_, exists = allowFirstLetters[first]
+	_, exists := allowFirstLetters[first]
 
 	if !exists {
 		return errInvalidKennitalaFirstLetter()
 	}
 
+	// Validate check digit
 	checkDigit, _ := utils.StringToInt(string(kennitala[8]))
 	calculatedCheckDigit, _ := calculateCheckDigit(kennitala)
 
 	if checkDigit != calculatedCheckDigit {
 		return errInvalidKennitalaCheckDigit()
+	}
+
+	return nil
+}
+
+// validateBirthdateAndCentury validates that the birthdate corresponds to the century
+func (kennitala Kennitala) validateBirthdateAndCentury() error {
+	// Extract the birth date
+	day := kennitala[:2]
+	month := kennitala[2:4]
+	year := kennitala[4:6]
+	centuryDigit := kennitala[9]
+
+	// Parse the year based on the century indicated by the ninth digit
+	var fullYear string
+	switch centuryDigit {
+	case '8':
+		fullYear = "18" + string(year)
+	case '9':
+		fullYear = "19" + string(year)
+	case '0':
+		fullYear = "20" + string(year)
+	default:
+		return errInvalidKennitalaCentury()
+	}
+
+	// Try to parse the birth date as a valid date
+	birthDate := fmt.Sprintf("%s-%s-%s", fullYear, month, day)
+	_, err := time.Parse("2006-01-02", birthDate)
+	if err != nil {
+		return errInvalidKennitalaDate()
 	}
 
 	return nil
@@ -113,9 +143,6 @@ func calculateCheckDigit(kennitala Kennitala) (int8, error) {
 	sum := uint16(0)
 	for i := uint8(0); i < 8; i++ {
 		num, _ := utils.StringToInt(string(kennitala[i]))
-		// if err != nil {
-		// 	// TODO: handle error
-		// }
 		sum += uint16(num * multiples[i])
 	}
 

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	kennitalaerrors "github.com/johannbrynjar/kennitala/kennitalaerror"
-	utils "github.com/johannbrynjar/kennitala/utils"
+	kennitalaerrors "github.com/noona-hq/kennitala/kennitalaerror"
+	utils "github.com/noona-hq/kennitala/utils"
 )
 
 var (
